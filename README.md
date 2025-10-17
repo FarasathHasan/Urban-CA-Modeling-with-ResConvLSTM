@@ -1,216 +1,400 @@
-# EnhancedResConvLSTM-CA
+# Deep Learning Cellular Automata for Urban Expansion Prediction
+
+A PyTorch-based implementation of a Deep Learning Cellular Automata (DLCA) model that combines ResConvLSTM units with Efficient Channel Position Attention (ECPA) mechanisms to predict urban expansion patterns. This project is designed for spatio-temporal land use/land cover (LULC) change modeling and urban growth simulation.
 
 ## Overview
 
-This repository contains a PyTorch implementation of an urban expansion simulation framework that combines residual ConvLSTM units with an Efficient Channel–Position Attention (ECPA) mechanism and classic residual convolutional blocks. The code reads multi-temporal land cover rasters and spatial growth factors (e.g., CBD distance, road proximity, population density, slope, restricted areas), trains a model to predict new urban conversions, evaluates results with standard and change-specific metrics, and supports multi-year forward simulation while preserving categorical land-use classes.
+Urban expansion is a critical phenomenon affecting environmental sustainability, resource management, and urban planning. This project implements an advanced deep learning approach to:
 
-The main script (`main.py` or the project Python file) includes data preparation, model building, training, evaluation, advanced analyses (variable importance, attention evolution, neighborhood effects, transition pattern analysis), and export of GeoTIFF prediction maps.
+- Predict urban expansion patterns based on spatial growth factors
+- Learn transition rules from temporal LULC data
+- Simulate future urban growth scenarios
+- Analyze attention mechanisms and variable importance
+- Evaluate predictions using land-change-specific metrics
 
-## Key Features
+The model architecture integrates:
+- **ResConvLSTM**: Residual Convolutional LSTM units for spatio-temporal feature learning
+- **ECPA Blocks**: Efficient Channel Position Attention for capturing important spatial and channel features
+- **Residual Blocks**: Standard convolutional residual connections for improved gradient flow
 
-* Residual ConvLSTM architecture (stacked ResConvLSTM units) for spatio-temporal modeling.
-* ECPA attention blocks with extraction and analysis of channel and spatial attention weights.
-* Training, validation and patch-based prediction workflow (non-overlapping patches by default).
-* Land-use–aware prediction that preserves categorical classes (urban, vegetation, water, paddy) and applies conversion constraints.
-* Evaluation metrics: accuracy, F1-score, IoU, Figure of Merit (FoM), Allocation Disagreement (AD), Quantity Disagreement (QD), counts of hits/misses/false alarms.
-* Experiment utilities: variable importance (correlation + ablation), attention evolution visualization, spatial autocorrelation (simplified Moran's I), cluster and edge analyses.
-* GeoTIFF export of predicted maps with categorical integer datatype.
+## Features
 
-## Repository Structure (recommended)
+### Core Functionality
+- Multi-temporal land cover classification and change detection
+- Patch-based deep learning approach for efficient processing of large raster data
+- Support for 2-3 time periods of land cover data
+- Flexible growth factor integration (CBD distance, road networks, population, slope, restricted areas, etc.)
+- GPU acceleration support via PyTorch
+
+### Advanced Analysis
+- **Variable Importance Analysis**: Correlation-based and ablation-based assessment of growth factors
+- **Attention Mechanism Analysis**: Distribution statistics and evolution tracking of attention weights
+- **Neighborhood Effects Analysis**: Spatial autocorrelation, urban cluster patterns, and edge effects
+- **Transition Pattern Analysis**: Land cover-specific transition probabilities and prediction confidence
+
+### Evaluation Metrics
+- Traditional metrics: Accuracy, F1 Score, IoU (Jaccard Index)
+- Land-change-specific metrics:
+  - Figure of Merit (FoM)
+  - Allocation Disagreement (AD)
+  - Quantity Disagreement (QD)
+  - Hits, Misses, False Alarms
+
+### Prediction & Simulation
+- Year-by-year urban expansion prediction
+- Multi-year future simulation with land use category preservation
+- GeoTIFF export with proper spatial reference information
+
+## Requirements
+
+### System Requirements
+- Python 3.7+
+- CUDA 11.0+ (for GPU acceleration, optional)
+- 8GB+ RAM (16GB+ recommended for large rasters)
+
+### Python Dependencies
 
 ```
-README.md
-requirements.txt
-main.py                       # Your main script (the code you provided)
-DataColombo/                  # Example data folder (GIS rasters)
-  2015_cleaned.tif
-  2020_cleaned.tif
-  2025_cleaned.tif
-  CBD_cleaned (1).tif
-  road_cleaned.tif
-  pop_cleaned.tif
-  slope_cleaned.tif
-  restricted_cleaned.tif
-outputs/                       # Saved models, PNGs and GeoTIFF outputs
-final_model.pth
-variable_importance.png
-attention_distributions.png
-training_history.png
-predicted_2025_accuracy_check.tif
-predicted_2030.tif
-predicted_2035.tif
+torch>=1.9.0
+numpy>=1.19.0
+gdal>=3.0.0
+scikit-learn>=0.24.0
+matplotlib>=3.3.0
+seaborn>=0.11.0
+pandas>=1.1.0
+scipy>=1.5.0
 ```
 
-Adjust folder and file names to match your environment.
+### Installation
 
-## Requirements and Installation
-
-**Recommended environment:** Miniconda/Anaconda (easiest for GDAL and GPU-enabled PyTorch).
-
-1. Create a conda environment (example):
-
+1. Clone the repository:
 ```bash
-conda create -n urban-exp python=3.10 -y
-conda activate urban-exp
+git clone https://github.com/yourusername/dlca-urban-expansion.git
+cd dlca-urban-expansion
 ```
 
-2. Install GDAL (use conda-forge for binary compatibility):
-
+2. Create a virtual environment:
 ```bash
-conda install -c conda-forge gdal -y
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install PyTorch (choose the right CUDA version from [https://pytorch.org](https://pytorch.org)):
-
+3. Install dependencies:
 ```bash
-# CPU-only (example)
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-# OR GPU (example for CUDA 12.1) -- replace with appropriate command from PyTorch site
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+pip install -r requirements.txt
 ```
 
-4. Install the remaining Python packages:
-
+Note: Installing GDAL can be challenging. For easier installation, use conda:
 ```bash
-pip install numpy scipy scikit-learn matplotlib seaborn pandas rasterio scikit-image
-# If you prefer gdal python bindings instead of rasterio keep the conda-installed gdal
-pip install tqdm
+conda create -n dlca python=3.9
+conda activate dlca
+conda install gdal torch scikit-learn matplotlib seaborn pandas scipy
 ```
 
-5. Optional: create a `requirements.txt` with pinned versions for reproducibility:
+## Data Format
 
+### Input Data Requirements
+
+The model requires:
+
+1. **Land Cover Maps** (GeoTIFF format):
+   - Multi-band or single-band raster files
+   - Integer values representing land use categories
+   - Same spatial extent and resolution
+   - Recommended categories:
+     - 1 = Urban/Built-up
+     - 2 = Vegetation/Forest
+     - 3 = Water
+     - 4 = Paddy/Agricultural lands
+
+2. **Growth Factors** (GeoTIFF format):
+   - CBD Distance: Distance to Central Business District (continuous)
+   - Road Network: Distance to nearest road (continuous)
+   - Population: Population density or count (continuous)
+   - Slope: Topographic slope in degrees (continuous)
+   - Restricted Areas: Binary mask (0=unrestricted, 1=restricted)
+
+### Example Data Structure
 ```
-numpy
-scipy
-scikit-learn
-matplotlib
-seaborn
-pandas
-rasterio
-torch
-torchvision
-tqdm
+project/
+├── DataColombo/
+│   ├── 2015_cleaned.tif
+│   ├── 2020_cleaned.tif
+│   ├── 2025_cleaned.tif
+│   ├── CBD_cleaned.tif
+│   ├── road_cleaned.tif
+│   ├── population_cleaned.tif
+│   ├── slope_cleaned.tif
+│   └── restricted_cleaned.tif
+├── script.py
+└── README.md
 ```
 
-> **Note:** Installing `gdal` via `pip` is often problematic; prefer `conda install -c conda-forge gdal`.
+## Usage
 
-## Data preparation
+### Basic Workflow
 
-1. Place your multi-temporal land cover rasters and factor rasters inside a data folder (e.g., `DataColombo/`).
-2. Filenames in the script are set to:
+```python
+import numpy as np
+from script import (
+    LandCoverData, GrowthFactors, DeepLearningCA,
+    exportPredicted
+)
 
-   * `2015_cleaned.tif`, `2020_cleaned.tif`, `2025_cleaned.tif` (optional 2025 used for validation)
-   * Factor rasters: `CBD_cleaned (1).tif`, `road_cleaned.tif`, `pop_cleaned.tif`, `slope_cleaned.tif`, `restricted_cleaned.tif`
-3. Land cover class convention used in the code (change if needed):
+# 1. Load land cover data for multiple time periods
+landcover = LandCoverData(
+    "DataColombo/2015_cleaned.tif",
+    "DataColombo/2020_cleaned.tif",
+    "DataColombo/2025_cleaned.tif"
+)
 
-   * `1` = Urban
-   * `2` = Vegetation
-   * `3` = Water
-   * `4` = Paddy lands
+# 2. Load growth factors
+factors = GrowthFactors(
+    "DataColombo/CBD_cleaned.tif",
+    "DataColombo/road_cleaned.tif",
+    "DataColombo/population_cleaned.tif",
+    "DataColombo/slope_cleaned.tif",
+    "DataColombo/restricted_cleaned.tif"
+)
 
-If your class codes differ, update the mapping logic in `predict_next_year()` and any evaluation masks accordingly.
+# 3. Initialize the model
+model = DeepLearningCA(landcover, factors, patch_size=64)
+model.build_model()
 
-## How to run (example)
+# 4. Train the model
+history = model.train(epochs=100, batch_size=16)
 
-1. Edit file paths and parameters at the bottom of `main.py` (or the script file). Confirm `patch_size` setting matches your raster dimensions (non-overlapping grid is used: `rows // patch_size` must be >= 1).
+# 5. Evaluate on validation year
+accuracy, f1, iou, predicted_2025 = model.evaluate(landcover.arr_lc3)
 
-2. Run training + experiments:
+# 6. Run advanced experiments
+results = model.run_advanced_experiments(X_val, y_val)
 
+# 7. Simulate future expansion
+future_preds = model.simulate_future(landcover.arr_lc3, years=5)
+exportPredicted(future_preds[5], 'predicted_2030.tif', landcover.ds_lc1)
+```
+
+### Run Complete Pipeline
+
+Execute the main script:
 ```bash
-python main.py
+python script.py
 ```
 
-This will:
+The script will:
+- Load and validate data
+- Prepare patches for training
+- Train the model for 100 epochs
+- Evaluate on 2025 data
+- Run comprehensive experiments
+- Generate future simulations (2025→2030, 2030→2035)
+- Export results as GeoTIFF files
+- Generate visualizations (PNG)
 
-* Load data, build the model and train for the number of epochs set in the script.
-* Save `final_model.pth` and PNG visualizations into the working directory.
-* Export prediction GeoTIFFs (predicted 2025, 2030, 2035) in the working folder.
+## Model Architecture
 
-### Quick tips
+### EnhancedResConvLSTMAttentionModel
 
-* If memory/GPU is tight, reduce `batch_size` or `patch_size` in the script.
-* If no patches are created, increase the number of negative sample ratio or reduce `patch_size`.
+```
+Input (channels, H, W)
+    ↓
+ResConvLSTM Block 1 (128 filters, 3 units)
+    ↓
+ResConvLSTM Block 2 (64 filters, 3 units)
+    ↓
+ECPA Block 1 (Channel + Spatial Attention)
+    ↓
+Residual Block (64 filters)
+    ↓
+ResConvLSTM Block 3 (32 filters, 1 unit)
+    ↓
+ECPA Block 2 (Channel + Spatial Attention)
+    ↓
+Residual Block (32 filters)
+    ↓
+ResConvLSTM Block 4 (1 filter)
+    ↓
+Final Conv + Sigmoid
+    ↓
+Output (0-1 probability of urban)
+```
 
-## Configuration options (what to edit in code)
+### Key Components
 
-* `patch_size` (default `64`) — spatial patch dimension for training and prediction.
-* `epochs` and `batch_size` in `train(epochs=..., batch_size=...)`.
-* File paths for land cover and factor rasters at the bottom of `main.py`.
-* Class mapping inside `predict_next_year()` if your dataset uses different labels.
-* Threshold for urban expansion `> 0.5` — consider tuning to maximize IoU/FoM.
+**ConvLSTM**: Convolutional LSTM cell combining convolutional operations with LSTM gating:
+- Input convolution: projects input and applies gates
+- Hidden convolution: processes hidden state
+- Cell state update: I⊙g + f⊙c (input gate, candidate, forget gate)
 
-## Model details
+**ECPA Block**: Dual attention mechanism:
+- Channel Attention: Learns channel importance via adaptive pooling and FC layers
+- Spatial Attention: Captures spatial patterns via mean/max pooling
 
-The provided model (`EnhancedResConvLSTMAttentionModel`) stacks several `ResConvLSTMUnit` blocks with channel reductions (128 → 64 → 32 → 1), interleaves ECPA attention blocks and residual convolutional blocks, and finishes with a `1x1` convolution + sigmoid to return per-pixel urban probability maps. Attention weights are stored in the ECPA blocks for later analysis.
+**ResConvLSTMUnit**: Combines ConvLSTM with residual connections and batch normalization for improved training stability
 
-## Evaluation and metrics
+## Output Files
 
-Evaluation is performed using:
+The model generates the following outputs:
 
-* Pixel-wise metrics: Accuracy, F1-score, IoU (Jaccard).
-* Change-specific metrics: Figure of Merit (FoM), Quantity Disagreement (QD), Allocation Disagreement (AD), hits/misses/false alarms.
+### Predictions
+- `predicted_2025_accuracy_check.tif`: Predicted 2025 land cover for validation
+- `predicted_2030.tif`: Simulated 2030 land cover
+- `predicted_2035.tif`: Simulated 2035 land cover
+- `final_model.pth`: Trained model weights
 
-The evaluation excludes water (`class == 3`) from change-area calculations by default. Adjust the `eval_mask` logic in `evaluate()` if a different exclusion rule is needed.
+### Visualizations
+- `training_history.png`: Training/validation loss and accuracy curves
+- `variable_importance.png`: Growth factor importance analysis
+- `attention_distributions.png`: Distribution of attention weights
+- `neighborhood_analysis.png`: Spatial clustering and edge effects
 
-## Advanced experiments included
+### Console Output
+- Land use distribution statistics
+- Training epoch metrics
+- Evaluation results with land-change-specific metrics
+- Advanced experiment summaries
 
-* **Variable importance:** correlation with model predictions and ablation (zeroing factors) with plots saved as `variable_importance.png`.
-* **Attention analysis:** saves attention distribution histograms and computes entropy/stability over time.
-* **Neighborhood effects:** simple Moran's I proxy, cluster analysis (connected components), edge vs interior density analysis with plots saved as `neighborhood_analysis.png`.
-* **Transition pattern analysis:** transition probabilities grouped by original land cover type and spatial consistency checks.
+## Advanced Features
 
-## Outputs and where to find them
+### Variable Importance Analysis
+Identifies which growth factors most influence urban expansion predictions through:
+- Correlation analysis between factors and predictions
+- Ablation study (removing each factor and measuring performance drop)
 
-* Model weights: `final_model.pth`
-* Visualizations: `training_history.png`, `variable_importance.png`, `attention_distributions.png`, `neighborhood_analysis.png`
-* GeoTIFFs: `predicted_2025_accuracy_check.tif`, `predicted_2030.tif`, `predicted_2035.tif`
+### Attention Mechanism Analysis
+Extracts and analyzes learned attention patterns:
+- Channel attention statistics (mean, std, range, entropy)
+- Spatial attention distributions
+- Attention evolution during training
 
-All outputs are saved to the working directory unless you customize the paths in the script.
+### Neighborhood Effect Analysis
+Quantifies spatial patterns in predictions:
+- Moran's I spatial autocorrelation
+- Urban cluster size and density
+- Edge vs. interior urban concentration
+
+### Transition Pattern Analysis
+Examines learned transition rules:
+- Transition probabilities by original land cover type
+- Spatial consistency of predictions
+- Prediction confidence distribution
+
+## Performance Considerations
+
+### Memory Usage
+- Large rasters (>3000x3000 pixels) with multiple factors may require chunking
+- Adjust batch_size and patch_size based on available GPU memory
+- Use GPU for training (10-50x faster than CPU)
+
+### Training Time
+- 100 epochs on typical datasets: 30-120 minutes (GPU)
+- Factors affecting speed:
+  - Number of patches (depends on patch_size and raster dimensions)
+  - Image resolution
+  - Hardware (GPU >> CPU)
+
+### Optimization Tips
+- Use patch_size=64 for balance between local context and memory efficiency
+- Reduce batch_size if GPU runs out of memory
+- Use ReduceLROnPlateau scheduler for adaptive learning rate
+- Monitor validation loss to prevent overfitting
+
+## Customization
+
+### Modify Model Architecture
+Edit `EnhancedResConvLSTMAttentionModel.__init__()`:
+```python
+# Add/remove layers
+self.resconvlstm1 = ResConvLSTMUnit(input_channels, 256)  # More filters
+self.dropout = nn.Dropout(0.5)  # Add dropout
+```
+
+### Change Training Parameters
+```python
+model.train(
+    epochs=200,              # Increase training iterations
+    batch_size=8             # Reduce batch size for small GPUs
+)
+```
+
+### Adjust Patch Size
+```python
+model = DeepLearningCA(landcover, factors, patch_size=128)
+# Larger patches: more context, less samples, slower training
+# Smaller patches: less context, more samples, faster training
+```
+
+### Add Custom Growth Factors
+Include additional factors in the GrowthFactors tuple and ensure they have the same spatial extent as land cover data.
 
 ## Troubleshooting
 
-* **GDAL errors while reading rasters:** make sure GDAL is installed (use conda-forge) and that the raster files are not corrupted. Use `gdalinfo <file>` to inspect.
-* **No patches created:** check `patch_size` and raster size alignment (`rows % patch_size` and `cols % patch_size`). Make sure target transitions exist (change pixels present); otherwise relax the negative sampling condition.
-* **Out of memory (OOM):** reduce `batch_size`, `patch_size`, or run on CPU for debugging by forcing `device = torch.device('cpu')`.
-* **Low IoU / poor predictions:** tune threshold, inspect class imbalance, add class weighting or focal loss, augment training samples, or add more informative growth factors.
-
-## How to upload this project to GitHub (basic steps)
-
-1. Initialize a git repo (if not already):
-
+### GDAL Import Error
 ```bash
-git init
-git add .
-git commit -m "Initial commit: EnhancedResConvLSTM-CA implementation"
+# Try conda installation
+conda install gdal
+# Or use pre-built wheels from Unofficial Windows Binaries
 ```
 
-2. Create a new repository on GitHub (via web UI) and then push:
+### GPU Memory Error
+- Reduce batch_size (16 → 8 or 4)
+- Reduce patch_size (64 → 32)
+- Use CPU instead (slower but works)
 
-```bash
-git remote add origin git@github.com:<your-username>/<your-repo>.git
-git branch -M main
-git push -u origin main
-```
+### File Not Found Error
+- Check file paths match exactly
+- Ensure GeoTIFF files are properly formatted
+- Verify all raster extents and resolutions match
 
-Or use HTTPS URL if you prefer:
+### Poor Prediction Quality
+- Ensure growth factors are meaningful for urban expansion
+- Check data normalization (should be near zero mean, unit variance)
+- Increase training epochs
+- Try adjusting learning rate or using different optimizer
+- Verify land cover categories are consistent across time periods
 
-```bash
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
-```
+## Methodological Notes
 
-## Citation and credit
+### Land Use Preservation
+The model predicts binary urban expansion but preserves original land use categories:
+- Class 1 (Urban): Never reverts to other classes
+- Class 2 (Vegetation) & 4 (Paddy): Can convert to Urban
+- Class 3 (Water): Never changes (excluded from evaluation)
 
-If you adapt or use this code in research, please cite this repository and any related publications you produce. Consider including an appropriate citation (BibTeX) section here once you have a paper or DOI.
+### Evaluation Strategy
+- 80% training, 20% validation split
+- Water pixels (class 3) excluded from evaluation metrics
+- Land-change metrics specifically designed for transition models
+
+### Validation Approach
+If 2025 actual data available:
+- Train on 2015→2020 and 2020→2025 transitions
+- Evaluate predicted 2025 against actual 2025
+- If no 2025 data, use cross-validation on 2015→2020
 
 ## License
 
-This repository is provided under the MIT License by default. Add `LICENSE` file with the MIT text if you want permissive reuse. Replace with another license if you prefer.
+This project is licensed under the MIT License. See LICENSE file for details.
 
-## Contact
+## Contact & Support
 
-For questions, bug reports, or improvements, open an issue in the repository or contact the author (add your email or ORCID here).
+For issues, questions, or suggestions:
+- Open an issue on GitHub
+- Email: hasan.mohomadasath@connect.polyu.hk
+- Include:
+  - Detailed error message and traceback
+  - Sample data or code to reproduce issue
+  - System information (OS, Python version, GPU info)
+
+## Acknowledgments
+
+- PyTorch development team
+- GDAL/OGR libraries
+- ResearchGate community for methodological discussions
 
 ---
 
-*Created from the user's DeepLearning CA script. Edit the README to include project-specific details (author name, repository URL, precise dependencies and versions).*
+**Last Updated**: 2025
+**Version**: 1.0.0
+**Status**: Actively Maintained
