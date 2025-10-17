@@ -1,0 +1,34 @@
+# requirements.txt for EnhancedResConvLSTM-CA
+# NOTE: It's strongly recommended to install GDAL via conda-forge before pip installs
+# (e.g., `conda install -c conda-forge gdal rasterio`).
+# Also install PyTorch following the instructions at https://pytorch.org for your CUDA version.
+
+numpy==1.25.2
+scipy==1.11.1
+scikit-learn==1.3.2
+matplotlib==3.8.1
+seaborn==0.12.2
+pandas==2.1.2
+rasterio==1.4.12
+scikit-image==0.21.0
+pillow==10.0.1
+tqdm==4.65.0
+
+# PyTorch (choose correct wheel for CUDA). Example: CPU-only pip wheels shown below.
+# If using GPU, install the appropriate torch/torchvision/torchaudio wheels from pytorch.org
+torch==2.2.0
+torchvision==0.17.1
+torchaudio==2.2.0
+
+# GDAL: pip installations may fail on many systems; prefer conda install:
+# gdal==3.7.2
+
+# Optional / helpful utilities
+notebook
+jupyterlab
+ipykernel
+
+# For tests and additional spatial processing
+scipy
+
+# End of file
