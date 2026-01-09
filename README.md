@@ -1,4 +1,4 @@
-# Deep Learning Cellular Automata for Urban Expansion Prediction
+# Deep Learning for Urban Expansion Prediction
 
 A PyTorch-based implementation of a Deep Learning Cellular Automata (DLCA) model that combines ResConvLSTM units with Efficient Channel Position Attention (ECPA) mechanisms to predict urban expansion patterns. This project is designed for spatio-temporal land use/land cover (LULC) change modeling and urban growth simulation.
 
